@@ -2,7 +2,7 @@ def get_suzhou_digit(i: int, /, vertical: bool=True) -> str:
     if i == 0:
         return '\u3007'
     elif 1 <= i <= 3 and not vertical:
-            return '\u4e00\u4e8c\u4e09'[i-1]
+        return '\u4e00\u4e8c\u4e09'[i-1]
     elif 1 <= i <= 9:
         return chr(0x3020 + i)
     elif i == 10:
@@ -24,13 +24,13 @@ def suzhou(x, /) -> str:
     for k in reversed(range(n)):
         i = x // 10**k % 10
         
-        returned += get_suzhou_digit(i, vertical)
-        
         if 1 <= i <= 3 and 1 <= last_i <= 3:
             vertical = not vertical
         else:
             vertical = True
-            
+        
+        returned += get_suzhou_digit(i, vertical)
+        
         last_i = i
     
     return returned
