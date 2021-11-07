@@ -25,7 +25,7 @@ def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
     returned = '\u8ca0' if x<0 else ''
     
     for k in reversed(range(n)):
-        i = x // 10**k % 10
+        i = abs(x) // 10**k % 10
         
         if 1 <= i <= 3 and 1 <= last_i <= 3:
             alt = not alt
@@ -37,6 +37,7 @@ def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
         last_i = i
     
     if mag is not None or unit is not None:
+        top_line = returned
         bottom_line = '\u3000' if x<0 else ''
         
         if mag:
@@ -53,25 +54,31 @@ def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
         
         if unit is not None:
             bottom_line += unit
-            
-        returned += '\n' + bottom_line
+        
+        zero_rstriped = top_line.rstrip('\u3007')
+        if top_line != zero_rstriped:
+            top_line = zero_rstriped + '\u3007'
+        
+        returned = top_line + '\n' + bottom_line
     
     return returned
 
 def to_int(x: str, /) -> int:
-    top_line, bottom_line = x.splitlines()
+    x = x.splitlines()
+    top_line = x[0]
     
     if top_line[0] == '\u8ca0':
         top_line = top_line[1:]
-        bottom_line = bottom_line[1:]
-        
         sign = -1
     else:
         sign = 1
     
-    returned = sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(top_line)))
-    
-    if len(x) >= 1:
+    if len(x) >= 2:
+        bottom_line = x[1]
+        
+        if sign == -1:
+            bottom_line = bottom_line[1:]
+        
         mag = bottom_line[0]
         mag_value = 1
         
@@ -83,25 +90,33 @@ def to_int(x: str, /) -> int:
             mag_value = 1000
         elif mag in '\u4e07\u842c':
             mag_value = 10000
+        
+        returned = 0
+        
+        for i in top_line:
+            returned += int(unicodedata.numeric(i)) * mag_value
+            mag_value //= 10
             
-        returned *= mag_value
-    
-    return returned * sign
+        return returned * sign
+    else:
+        return sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(top_line))) * sign
 
 def to_float(x: str, /) -> float:
-    top_line, bottom_line = x.splitlines()
+    x = x.splitlines()
+    top_line = x[0]
     
     if top_line[0] == '\u8ca0':
         top_line = top_line[1:]
-        bottom_line = bottom_line[1:]
-        
         sign = -1
     else:
         sign = 1
     
-    returned = sum(unicodedata.numeric(i) * 10**k for k, i in enumerate(reversed(top_line)))
-    
-    if len(x) >= 1:
+    if len(x) >= 2:
+        bottom_line = x[1]
+        
+        if sign == -1:
+            bottom_line = bottom_line[1:]
+        
         mag = bottom_line[0]
         mag_value = 1.0
         
@@ -115,10 +130,16 @@ def to_float(x: str, /) -> float:
             mag_value = 10000.0
         elif mag in '\u6bdb\u6beb':
             mag_value = 0.1
+        
+        returned = 0
+        
+        for i in top_line:
+            returned += unicodedata.numeric(i) * mag_value
+            mag_value /= 10.0
             
-        returned *= mag_value
-    
-    return returned * sign
+        return returned * sign
+    else:
+        return sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(top_line))) * sign
 
 ZERO = get_suzhou_digit(0)
 ONE = get_suzhou_digit(1)
