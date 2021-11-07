@@ -14,7 +14,7 @@ def get_suzhou_digit(i: int, /, vertical: bool=True): -> str
     else:
         raise ValueError
 
-def suzhou(x, /): -> str
+def suzhou(x, /) -> str:
     n = len(str(x))
     
     vertical = True
