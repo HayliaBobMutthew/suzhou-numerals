@@ -1,4 +1,4 @@
-def get_suzhou_digit(i: int, /, vertical: bool=True): -> str
+def get_suzhou_digit(i: int, /, vertical: bool=True) -> str:
     if i == 0:
         return '\u3007'
     elif 1 <= i <= 3 and not vertical:
