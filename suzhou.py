@@ -21,7 +21,7 @@ def suzhou(x, /) -> str:
     last_i = 0
     returned = ''
     
-    for k in range(n-1, 0, -1):
+    for k in reversed(range(n)):
         i = x // 10**k % 10
         
         returned += get_suzhou_digit(i, vertical)
