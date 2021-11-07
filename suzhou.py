@@ -22,7 +22,7 @@ def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
     
     alt = False
     last_i = 0
-    returned = '\uff0d' if x<0 else ''
+    returned = '\u8ca0' if x<0 else ''
     
     for k in reversed(range(n)):
         i = x // 10**k % 10
@@ -59,34 +59,50 @@ def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
     return returned
 
 def to_int(x: str, /) -> int:
-    x = x.splitlines()
+    top_line, bottom_line = x.splitlines()
     
-    returned = sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(x[0])))
+    if top_line[0] == '\u8ca0':
+        top_line = top_line[1:]
+        bottom_line = bottom_line[1:]
+        
+        sign = -1
+    else:
+        sign = 1
+    
+    returned = sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(top_line)))
     
     if len(x) >= 1:
-        mag = x[1][0]
+        mag = bottom_line[0]
         mag_value = 1
         
-        if mag in {TEN, '\u5341'}:
+        if mag in TEN + '\u5341':
             mag_value = 10
         elif mag == '\u767e':
             mag_value = 100
         elif mag == '\u5343':
             mag_value = 1000
-        elif mag in {'\u4e07', '\u842c'}:
+        elif mag in '\u4e07\u842c':
             mag_value = 10000
             
         returned *= mag_value
-    else:
-        return returned
+    
+    return returned * sign
 
 def to_float(x: str, /) -> float:
-    x = x.splitlines()
+    top_line, bottom_line = x.splitlines()
     
-    returned = sum(unicodedata.numeric(i) * 10**k for k, i in enumerate(reversed(x[0])))
+    if top_line[0] == '\u8ca0':
+        top_line = top_line[1:]
+        bottom_line = bottom_line[1:]
+        
+        sign = -1
+    else:
+        sign = 1
+    
+    returned = sum(unicodedata.numeric(i) * 10**k for k, i in enumerate(reversed(top_line)))
     
     if len(x) >= 1:
-        mag = x[1][0]
+        mag = bottom_line[0]
         mag_value = 1.0
         
         if mag in TEN + '\u5341':
@@ -101,8 +117,8 @@ def to_float(x: str, /) -> float:
             mag_value = 0.1
             
         returned *= mag_value
-    else:
-        return returned
+    
+    return returned * sign
 
 ZERO = get_suzhou_digit(0)
 ONE = get_suzhou_digit(1)
