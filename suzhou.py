@@ -18,7 +18,7 @@ def get_suzhou_digit(i: int, /, alt: bool=False) -> str:
         raise ValueError
 
 def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
-    n = int(math.log10(abs(x))) + 1 if abs(x) else 1
+    n = len(str(abs(x))) if abs(x) else 1
     
     alt = False
     last_i = 0
