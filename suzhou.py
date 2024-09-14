@@ -47,7 +47,7 @@ TEN = suzhou_digit(10)
 TWENTY = suzhou_digit(20)
 THIRTY = suzhou_digit(30)
 
-def suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
+def suzhou(x: int, /, mag: bool=False, unit: str=None, sign_prefix: str='－') -> str:
     sign = -1 if x < 0 else 1
     
     x = str(abs(x))
@@ -67,17 +67,17 @@ def suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
         
         prev_i = i
     
-    returned = ('負' if sign == -1 else '') + ''.join(suzhou_digit(int(i), alt) for i, alt in zip(x, alt_list))
+    returned = (sign_prefix if sign == -1 else '') + ''.join(suzhou_digit(int(i), alt) for i, alt in zip(x, alt_list))
     
     if mag or unit:
         line0 = returned
-        line1 = '\u3000' if sign == -1 else ''
+        line1 = '　' if sign == -1 else ''
         
         if mag:
             if 2 <= n <= 4:
                 line1 += '十百千'[n - 2]
             elif n >= 5:
-                line1 += '\u3000' * (n - 5) + '万'
+                line1 += '　' * (n - 5) + '万'
         
         if unit:
             line1 += unit
@@ -97,7 +97,7 @@ def to_numeric(x: str, /, type_=int):
     x = x.splitlines()
     line0 = x[0]
     
-    if line0[0] == '負':
+    if line0[0] in '-－負':
         line0 = line0[1:]
         sign = -1
     else:
