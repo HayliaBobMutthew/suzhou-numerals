@@ -132,7 +132,7 @@ def to_numeric(x: str, /, type_=int):
         with localcontext(prec=len(line0)) as ctx:
             return +(Decimal(returned) * mag_value * sign)
     else:
-        return returned * mag_value * sign
+        return type_(returned * mag_value * sign)
 
 def to_int(x: str, /) -> int:
     return to_numeric(x)
