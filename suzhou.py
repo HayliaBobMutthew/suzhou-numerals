@@ -1,161 +1,138 @@
-import unicodedata
-import math
+from decimal import Decimal, localcontext
 
-def get_suzhou_digit(i: int, /, alt: bool=False) -> str:
+def suzhou_digit(i: int, /, alt: bool=False) -> str:
     if i == 0:
-        return '\u3007'
+        return '〇'
     elif 1 <= i <= 3 and alt:
-        return '\u4e00\u4e8c\u4e09'[i-1]
+        return '一二三'[i - 1]
     elif 1 <= i <= 9:
         return chr(0x3020 + i)
-    elif i == 10:
-        return '\u3038'
-    elif i == 20:
-        return '\u3039'
-    elif i == 30:
-        return '\u303a'
+    elif i in {10, 20, 30}:
+        return '〸〹〺'[i // 10 - 1]
     else:
         raise ValueError
 
-def to_suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
-    n = len(str(abs(x)))
+def suzhou_digit_to_int(i: str, /) -> int:
+    if i == '〇':
+        return 0
+    elif i == '一':
+        return 1
+    elif i == '二':
+        return 2
+    elif i == '三':
+        return 3
+    elif '〡' <= i <= '〩':
+        return ord(i) - 0x3020
+    elif i in '〸〹〺':
+        return 10 * (ord(i) - 0x3038 + 1)
+    else:
+        return ValueError
+
+ZERO = suzhou_digit(0)
+ONE = suzhou_digit(1)
+TWO = suzhou_digit(2)
+THREE = suzhou_digit(3)
+FOUR = suzhou_digit(4)
+FIVE = suzhou_digit(5)
+SIX = suzhou_digit(6)
+SEVEN = suzhou_digit(7)
+EIGHT = suzhou_digit(8)
+NINE = suzhou_digit(9)
+
+ONE_ALT = suzhou_digit(1, True)
+TWO_ALT = suzhou_digit(2, True)
+THREE_ALT = suzhou_digit(3, True)
+
+TEN = suzhou_digit(10)
+TWENTY = suzhou_digit(20)
+THIRTY = suzhou_digit(30)
+
+def suzhou(x: int, /, mag: bool=False, unit: str=None) -> str:
+    sign = -1 if x < 0 else 1
+    
+    x = str(abs(x))
+    n = len(x)
     
     alt = False
-    last_i = 0
-    returned = '\u8ca0' if x<0 else ''
+    prev_i = '0'
     
-    for k in reversed(range(n)):
-        i = abs(x) // 10**k % 10
-        
-        if 1 <= i <= 3 and 1 <= last_i <= 3:
+    alt_list = []
+    for i in x:
+        if i in '123' and prev_i in '123':
             alt = not alt
         else:
             alt = False
         
-        returned += get_suzhou_digit(i, alt)
+        alt_list.append(alt)
         
-        last_i = i
+        prev_i = i
     
-    if mag is not None or unit is not None:
-        top_line = returned
-        bottom_line = '\u3000' if x<0 else ''
+    returned = ('負' if sign == -1 else '') + ''.join(suzhou_digit(int(i), alt) for i, alt in zip(x, alt_list))
+    
+    if mag or unit:
+        line0 = returned
+        line1 = '\u3000' if sign == -1 else ''
         
         if mag:
-            if n <= 1:
-                pass
-            elif n == 2:
-                bottom_line += '\u5341'
-            elif n == 3:
-                bottom_line += '\u767e'
-            elif n == 4:
-                bottom_line += '\u5343'
-            elif n == 5:
-                bottom_line += '\u4e07'
+            if 2 <= n <= 4:
+                line1 += '十百千'[n - 2]
+            elif n >= 5:
+                line1 += '\u3000' * (n - 5) + '万'
         
-        if unit is not None:
-            bottom_line += unit
+        if unit:
+            line1 += unit
         
-        zero_rstriped = top_line.rstrip('\u3007')
-        if top_line != zero_rstriped:
-            top_line = zero_rstriped + '\u3007'
+        trim_zeros = line0.rstrip('〇')
+        if line0 != trim_zeros:
+            line0 = trim_zeros + '〇'
+            
+            if len(line0) != len(line1):
+                line0 += '〇' * (len(line1) - len(line0))
         
-        returned = top_line + '\n' + bottom_line
+        returned = line0 + '\n' + line1
     
     return returned
 
-def to_int(x: str, /) -> int:
+def to_numeric(x: str, /, type_=int):
     x = x.splitlines()
-    top_line = x[0]
+    line0 = x[0]
     
-    if top_line[0] == '\u8ca0':
-        top_line = top_line[1:]
+    if line0[0] == '負':
+        line0 = line0[1:]
         sign = -1
     else:
         sign = 1
     
+    mag_value = 1
     if len(x) >= 2:
-        bottom_line = x[1]
+        line1 = x[1]
         
         if sign == -1:
-            bottom_line = bottom_line[1:]
+            line1 = line1[1:]
         
-        mag = bottom_line[0]
-        mag_value = 1
+        mag = line1[0]
         
-        if mag in TEN + '\u5341':
+        if mag in '〸十拾':
             mag_value = 10
-        elif mag == '\u767e':
+        elif mag in '百佰':
             mag_value = 100
-        elif mag == '\u5343':
+        elif mag in '千仟':
             mag_value = 1000
-        elif mag in '\u4e07\u842c':
+        elif mag in '万萬':
             mag_value = 10000
-        
-        returned = 0
-        
-        for i in top_line:
-            returned += int(unicodedata.numeric(i)) * mag_value
-            mag_value //= 10
-            
-        return returned * sign
-    else:
-        return sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(top_line))) * sign
-
-def to_float(x: str, /) -> float:
-    x = x.splitlines()
-    top_line = x[0]
+        elif mag in '毛毫':
+            if type_ != int:
+                mag_value = type_('0.1')
+            else:
+                mag_value = 0.1
     
-    if top_line[0] == '\u8ca0':
-        top_line = top_line[1:]
-        sign = -1
-    else:
-        sign = 1
+    returned = sum(suzhou_digit_to_int(i) * 10**k for k, i in enumerate(reversed(line0)))
     
-    if len(x) >= 2:
-        bottom_line = x[1]
-        
-        if sign == -1:
-            bottom_line = bottom_line[1:]
-        
-        mag = bottom_line[0]
-        mag_value = 1.0
-        
-        if mag in TEN + '\u5341':
-            mag_value = 10.0
-        elif mag == '\u767e':
-            mag_value = 100.0
-        elif mag == '\u5343':
-            mag_value = 1000.0
-        elif mag in '\u4e07\u842c':
-            mag_value = 10000.0
-        elif mag in '\u6bdb\u6beb':
-            mag_value = 0.1
-        
-        returned = 0
-        
-        for i in top_line:
-            returned += unicodedata.numeric(i) * mag_value
-            mag_value /= 10.0
-            
-        return returned * sign
+    if type_ == Decimal:
+        with localcontext(prec=len(line0)) as ctx:
+            return +(Decimal(returned) * mag_value * sign)
     else:
-        return sum(int(unicodedata.numeric(i)) * 10**k for k, i in enumerate(reversed(top_line))) * sign
+        return returned * mag_value * sign
 
-ZERO = get_suzhou_digit(0)
-ONE = get_suzhou_digit(1)
-TWO = get_suzhou_digit(2)
-THREE = get_suzhou_digit(3)
-FOUR = get_suzhou_digit(4)
-FIVE = get_suzhou_digit(5)
-SIX = get_suzhou_digit(6)
-SEVEN = get_suzhou_digit(7)
-EIGHT = get_suzhou_digit(8)
-NINE = get_suzhou_digit(9)
-
-ONE_ALT = get_suzhou_digit(1, True)
-TWO_ALT = get_suzhou_digit(2, True)
-THREE_ALT = get_suzhou_digit(3, True)
-
-TEN = get_suzhou_digit(10)
-TWENTY = get_suzhou_digit(20)
-THIRTY = get_suzhou_digit(30)
+def to_int(x: str, /) -> int:
+    return to_numeric(x)
