@@ -56,9 +56,9 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, unit: str = None, sign_
     sign_prefix = sign_prefix if x < 0 else ''
     
     if n and not isinstance(x, int):
-        x = f'{abs(x):.{n}f}'
+        x = f'{x:.{n}f}'.lstrip('-')
     else:
-        x = str(abs(x))
+        x = str(x).lstrip('-')
     
     alt = False
     prev_i = '0'
@@ -109,45 +109,68 @@ def to_numeric(x: str, /, type_: type = int):
     x = x.splitlines()
     line0 = x[0]
     
-    if line0[0] in '-－負':
+    if line0[0] in '-－':
         line0 = line0[1:]
         sign = -1
+        strip = True
     else:
         sign = 1
+        if line0[0] in '+＋':
+            line0 = line0[1:]
+            strip = True
+        else:
+            strip = False
     
-    mag_value = 1
+    mag = None
     if len(x) >= 2:
         line1 = x[1]
         
-        if sign == -1:
+        if strip:
             line1 = line1[1:]
         
-        mag = line1[0]
-        
-        if mag in '〸十拾':
-            mag_value = 10
-        elif mag in '百佰':
-            mag_value = 100
-        elif mag in '千仟':
-            mag_value = 1000
-        elif mag in '万萬':
-            mag_value = 10000
-        elif mag in '毛毫':
-            if type_ != int:
-                mag_value = type_('0.1')
+        mag = 1
+        for char in line1:
+            if char == '　':
+                mag *= 10
             else:
-                mag_value = 0.1
+                if char in '〸十拾':
+                    mag *= 10
+                elif char in '百佰':
+                    mag *= 100
+                elif char in '千仟':
+                    mag *= 1000
+                elif char in '万萬':
+                    mag *= 10000
+                elif char in '毛毫':
+                    if type_ != int:
+                        mag *= type_('0.1')
+                    else:
+                        mag *= 0.1
+                break
     
-    map_ = lambda i: '.' if i in '.．' else str(suzhou_numeral_value(i))
-    
-    returned = ''.join(map_(i) for i in line0)
-    
-    if isinstance(type_(), Decimal):
+    if type_ is Decimal:
+        returned = ''.join('.' if i in '.．' else str(suzhou_numeral_value(i)) for i in line0)
+        
+        if mag is None:
+            mag = 1
+        
         dps = len(returned.replace('.', ''))
         with localcontext(prec=dps) as ctx:
-            return +(type_(returned) * mag_value * sign)
+            return type_(returned) * mag * sign
+    elif mag is not None:
+        returned = type_(0)
+        for i in line0:
+            if i in '.．':
+                continue
+            returned += suzhou_numeral_value(i) * mag
+            if mag > 1:
+                mag //= 10
+            else:
+                mag /= type_(10)
+                
+        return returned * sign
     else:
-        return type_(returned) * mag_value * sign
+        return type_(''.join('.' if i in '.．' else str(suzhou_numeral_value(i)) for i in line0)) * sign
 
 def to_int(x: str, /) -> int:
     return to_numeric(x)
