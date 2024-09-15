@@ -1,6 +1,7 @@
 from decimal import Decimal, localcontext
+from numbers import Real
 
-def suzhou_digit(i: int, /, alt: bool=False) -> str:
+def suzhou_digit(i: int, /, alt: bool = False) -> str:
     if i == 0:
         return '〇'
     elif 1 <= i <= 3 and alt:
@@ -12,7 +13,7 @@ def suzhou_digit(i: int, /, alt: bool=False) -> str:
     else:
         raise ValueError
 
-def suzhou_digit_to_int(i: str, /) -> int:
+def suzhou_numeral_value(i: str, /) -> int:
     if i == '〇':
         return 0
     elif i == '一':
@@ -23,8 +24,12 @@ def suzhou_digit_to_int(i: str, /) -> int:
         return 3
     elif '〡' <= i <= '〩':
         return ord(i) - 0x3020
-    elif i in '〸〹〺':
-        return 10 * (ord(i) - 0x3038 + 1)
+    elif i in '〸十':
+        return 10
+    elif i in '〹卄':
+        return 20
+    elif i in '〺卅':
+        return 30
     else:
         return ValueError
 
@@ -47,15 +52,16 @@ TEN = suzhou_digit(10)
 TWENTY = suzhou_digit(20)
 THIRTY = suzhou_digit(30)
 
-def suzhou(x: int, /, mag: bool=False, unit: str=None, sign_prefix: str='－') -> str:
-    sign = -1 if x < 0 else 1
+def suzhou(x: Real, /, n: int = None, mag: bool = False, unit: str = None, sign_prefix: str = '－', decimal_point: str = '．') -> str:
+    sign_prefix = sign_prefix if x < 0 else ''
     
-    x = str(abs(x))
-    n = len(x)
+    if n and not isinstance(x, int):
+        x = f'{abs(x):.{n}f}'
+    else:
+        x = str(abs(x))
     
     alt = False
     prev_i = '0'
-    
     alt_list = []
     for i in x:
         if i in '123' and prev_i in '123':
@@ -67,17 +73,20 @@ def suzhou(x: int, /, mag: bool=False, unit: str=None, sign_prefix: str='－') -
         
         prev_i = i
     
-    returned = (sign_prefix if sign == -1 else '') + ''.join(suzhou_digit(int(i), alt) for i, alt in zip(x, alt_list))
+    map_ = lambda i, alt: '．' if i == '.' else suzhou_digit(int(i), alt)
+    returned = sign_prefix + ''.join(map_(i, alt) for i, alt in zip(x, alt_list))
     
     if mag or unit:
         line0 = returned
-        line1 = '　' if sign == -1 else ''
+        line1 = '　' if sign_prefix else ''
         
         if mag:
-            if 2 <= n <= 4:
-                line1 += '十百千'[n - 2]
-            elif n >= 5:
-                line1 += '　' * (n - 5) + '万'
+            mag_n = len(x.split('.')[0])
+            
+            if 2 <= mag_n <= 4:
+                line1 += '十百千'[mag_n - 2]
+            elif mag_n >= 5:
+                line1 += '　' * (mag_n - 5) + '万'
         
         if unit:
             line1 += unit
@@ -93,7 +102,10 @@ def suzhou(x: int, /, mag: bool=False, unit: str=None, sign_prefix: str='－') -
     
     return returned
 
-def to_numeric(x: str, /, type_=int):
+def to_numeric(x: str, /, type_: type = int):
+    if ('.' in x) or ('．' in x) and (type_ is int):
+        type_ = float
+    
     x = x.splitlines()
     line0 = x[0]
     
@@ -126,13 +138,16 @@ def to_numeric(x: str, /, type_=int):
             else:
                 mag_value = 0.1
     
-    returned = sum(suzhou_digit_to_int(i) * 10**k for k, i in enumerate(reversed(line0)))
+    map_ = lambda i: '.' if i in '.．' else str(suzhou_numeral_value(i))
     
-    if type_ == Decimal:
-        with localcontext(prec=len(line0)) as ctx:
-            return +(Decimal(returned) * mag_value * sign)
+    returned = ''.join(map_(i) for i in line0)
+    
+    if isinstance(type_(), Decimal):
+        dps = len(returned.replace('.', ''))
+        with localcontext(prec=dps) as ctx:
+            return +(type_(returned) * mag_value * sign)
     else:
-        return type_(returned * mag_value * sign)
+        return type_(returned) * mag_value * sign
 
 def to_int(x: str, /) -> int:
     return to_numeric(x)
