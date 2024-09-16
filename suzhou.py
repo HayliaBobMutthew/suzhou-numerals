@@ -52,7 +52,7 @@ TEN = suzhou_digit(10)
 TWENTY = suzhou_digit(20)
 THIRTY = suzhou_digit(30)
 
-def suzhou(x: Real, /, n: int = None, mag: bool = False, unit: str = None, sign_prefix: str = '－', decimal_point: str = '．') -> str:
+def suzhou(x: Real, /, n: int = None, mag: bool = False, sign_prefix: str = '－', decimal_point: str = '．') -> str:
     sign_prefix = sign_prefix if x < 0 else ''
     
     if n and not isinstance(x, int):
@@ -74,22 +74,18 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, unit: str = None, sign_
         prev_i = i
     
     map_ = lambda i, alt: '．' if i == '.' else suzhou_digit(int(i), alt)
-    returned = sign_prefix + ''.join(map_(i, alt) for i, alt in zip(x, alt_list))
+    returned = f'{sign_prefix}{"".join(map_(i, alt) for i, alt in zip(x, alt_list))}'
     
-    if mag or unit:
+    if mag:
         line0 = returned
         line1 = '　' if sign_prefix else ''
         
-        if mag:
-            mag_n = len(x.split('.')[0])
-            
-            if 2 <= mag_n <= 4:
-                line1 += '十百千'[mag_n - 2]
-            elif mag_n >= 5:
-                line1 += '　' * (mag_n - 5) + '万'
+        mag_n = len(x.split('.')[0])
         
-        if unit:
-            line1 += unit
+        if 2 <= mag_n <= 4:
+            line1 += '十百千'[mag_n - 2]
+        elif mag_n >= 5:
+            line1 += '　' * (mag_n - 5) + '万'
         
         trim_zeros = line0.rstrip('〇')
         if line0 != trim_zeros:
@@ -98,7 +94,7 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, unit: str = None, sign_
             if len(line0) != len(line1):
                 line0 += '〇' * (len(line1) - len(line0))
         
-        returned = line0 + '\n' + line1
+        returned = f'{line0}\n{line1}'
     
     return returned
 
@@ -177,7 +173,7 @@ def to_numeric_type(x: str, /, type_: type = int):
         else:
             return returned
     else:
-        return type_(('-' if negative else '') + ''.join('.' if i in '.．' else str(suzhou_numeral_value(i)) for i in line0))
+        return type_(f'{"-" if negative else ""}{"".join("." if i in ".．" else str(suzhou_numeral_value(i)) for i in line0)}')
 
 def to_int(x: str, /) -> int:
     return to_numeric_type(x)
