@@ -52,13 +52,18 @@ TEN = suzhou_digit(10)
 TWENTY = suzhou_digit(20)
 THIRTY = suzhou_digit(30)
 
-def suzhou(x: Real, /, n: int = None, mag: bool = False, sign_prefix: str = '－', decimal_point: str = '．') -> str:
-    sign_prefix = sign_prefix if x < 0 else ''
+def suzhou(x: Real, /, n: int = None, mag: bool = False, trim_0: bool = True, sign_prefix: str = '－', decimal_point: str = '．') -> str:
     
-    if n and not isinstance(x, int):
-        x = f'{x:.{n}f}'.lstrip('-')
+    if isinstance(x, str):
+        sign_prefix = sign_prefix if x[0] == '-' else ''
+        x = x.lstrip('-+')
     else:
-        x = str(x).lstrip('-')
+        sign_prefix = sign_prefix if x < 0 else ''
+        
+        if n and not isinstance(x, int):
+            x = f'{x:.{n}f}'.lstrip('-+')
+        else:
+            x = str(x).lstrip('-+')
     
     alt = False
     prev_i = '0'
@@ -87,16 +92,12 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, sign_prefix: str = '－
         elif mag_n >= 5:
             line1 += '　' * (mag_n - 5) + '万'
         
-        trim_zeros = line0.rstrip('〇')
-        if line0 != trim_zeros:
-            line0 = trim_zeros + '〇'
-            
-            if len(line0) != len(line1):
-                line0 += '〇' * (len(line1) - len(line0))
+        if trim_0:
+            line0 = line0.rstrip('〇')
         
-        returned = f'{line0}\n{line1}'
-    
-    return returned
+        return f'{line0}\n{line1}'
+    else:
+        return returned
 
 def to_numeric_type(x: str, /, type_: type = int):
     if ('.' in x) or ('．' in x) and (type_ is int):
