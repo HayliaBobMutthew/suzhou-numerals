@@ -102,7 +102,7 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, unit: str = None, sign_
     
     return returned
 
-def to_numeric(x: str, /, type_: type = int):
+def to_numeric_type(x: str, /, type_: type = int):
     if ('.' in x) or ('．' in x) and (type_ is int):
         type_ = float
     
@@ -111,10 +111,10 @@ def to_numeric(x: str, /, type_: type = int):
     
     if line0[0] in '-－':
         line0 = line0[1:]
-        sign = -1
+        negative = True
         strip = True
     else:
-        sign = 1
+        negative = False
         if line0[0] in '+＋':
             line0 = line0[1:]
             strip = True
@@ -155,8 +155,12 @@ def to_numeric(x: str, /, type_: type = int):
             mag = 1
         
         dps = len(returned.replace('.', ''))
+        
+        if negative:
+            returned = '-' + returned
+        
         with localcontext(prec=dps) as ctx:
-            return type_(returned) * mag * sign
+            return type_(returned) * mag
     elif mag is not None:
         returned = type_(0)
         for i in line0:
@@ -167,10 +171,13 @@ def to_numeric(x: str, /, type_: type = int):
                 mag //= 10
             else:
                 mag /= type_(10)
-                
-        return returned * sign
+        
+        if negative:
+            return -returned
+        else:
+            return returned
     else:
-        return type_(''.join('.' if i in '.．' else str(suzhou_numeral_value(i)) for i in line0)) * sign
+        return type_(('-' if negative else '') + ''.join('.' if i in '.．' else str(suzhou_numeral_value(i)) for i in line0))
 
 def to_int(x: str, /) -> int:
-    return to_numeric(x)
+    return to_numeric_type(x)
