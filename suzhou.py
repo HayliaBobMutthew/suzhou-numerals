@@ -53,7 +53,6 @@ TWENTY = suzhou_digit(20)
 THIRTY = suzhou_digit(30)
 
 def suzhou(x: Real, /, n: int = None, mag: bool = False, trim_0: bool = True, sign_prefix: str = '－', decimal_point: str = '．') -> str:
-    
     if isinstance(x, str):
         sign_prefix = sign_prefix if x[0] == '-' else ''
         x = x.lstrip('-+')
