@@ -117,59 +117,49 @@ def to_numeric_type(x: str, /, type_: type = int):
         else:
             strip = False
     
-    mag = None
+    shift = 0
     if len(x) >= 2:
         line1 = x[1]
         
         if strip:
             line1 = line1[1:]
         
-        mag = 1
         for char in line1:
             if char == '　':
-                mag *= 10
+                shift += 1
             else:
                 if char in '〸十拾':
-                    mag *= 10
+                    shift += 1
                 elif char in '百佰':
-                    mag *= 100
+                    shift += 2
                 elif char in '千仟':
-                    mag *= 1000
+                    shift += 3
                 elif char in '万萬':
-                    mag *= 10000
+                    shift += 4
                 elif char in '毛毫':
-                    if type_ != int:
-                        mag *= type_('0.1')
-                    else:
-                        mag *= 0.1
+                    shift -= 1
                 break
     
-    if type_ is Decimal:
-        returned = ''.join('.' if i in '.．' else str(suzhou_numeral_value(i)) for i in line0)
-        
-        if mag is None:
-            mag = 1
-        
-        dps = len(returned.replace('.', ''))
-        
-        if negative:
-            returned = '-' + returned
-        
+    if shift:
+        dps = len(line0.replace('.', ''))
         with localcontext(prec=dps) as ctx:
-            return type_(returned) * mag
-    elif mag is not None:
-        returned = type_(0)
-        for i in line0:
-            if i in '.．':
-                continue
-            returned += suzhou_numeral_value(i) * mag
-            if mag > 1:
-                mag //= 10
-            else:
-                mag /= type_(10)
+            returned = type_(0)
+            for i in line0:
+                if i in '.．':
+                    continue
+                
+                if type_ is Decimal:
+                    returned += type_(suzhou_numeral_value(i)).scaleb(shift)
+                else:
+                    returned += suzhou_numeral_value(i) * (10 ** shift)
+                
+                shift -= 1
         
         if negative:
-            return -returned
+            if type_ is Decimal:
+                return returned.copy_negate()
+            else:
+                return -returned
         else:
             return returned
     else:
@@ -177,3 +167,6 @@ def to_numeric_type(x: str, /, type_: type = int):
 
 def to_int(x: str, /) -> int:
     return to_numeric_type(x)
+
+def to_decimal_str(x: str, /) -> str:
+    return to_numeric_type(x, str)
