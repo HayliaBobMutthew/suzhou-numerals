@@ -99,9 +99,6 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, trim_0: bool = True, si
         return returned
 
 def to_numeric_type(x: str, /, type_: type = int):
-    if ('.' in x) or ('．' in x) and (type_ is int):
-        type_ = float
-    
     x = x.splitlines()
     line0 = x[0]
     
@@ -124,7 +121,10 @@ def to_numeric_type(x: str, /, type_: type = int):
         if strip:
             line1 = line1[1:]
         
-        for char in line1:
+        for i, char in enumerate(line1):
+            if line0[i] in '.．':
+                break
+            
             if char == '　':
                 shift += 1
             else:
