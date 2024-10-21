@@ -98,12 +98,12 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, trim_0: bool = True, si
                 line0 = f'{line0}{ZERO * (len(line1) - len(line0))}'
         
         if line0.endswith(decimal_point):
-            line0 = f'{line0}〇'
+            line0 = f'{line0}{ZERO}'
         
         return f'{line0}\n{line1}'
     else:
         if returned.endswith(decimal_point):
-            returned = f'{returned}〇'
+            returned = f'{returned}{ZERO}'
         
         return returned
 
