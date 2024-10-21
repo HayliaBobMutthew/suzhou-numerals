@@ -1,5 +1,6 @@
-from decimal import Decimal, localcontext
 from numbers import Real
+
+__all__ = ['suzhou_digit', 'suzhou_numeral_value', 'suzhou', 'to_numeric_type', 'to_int', 'to_decimal_str']
 
 def suzhou_digit(i: int, /, alt: bool = False) -> str:
     if i == 0:
@@ -92,10 +93,18 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, trim_0: bool = True, si
             line1 += '　' * (mag_n - 5) + '万'
         
         if trim_0:
-            line0 = line0.rstrip('〇')
+            line0 = line0.rstrip("〇")
+            if len(line0) < len(line1):
+                line0 = f'{line0}{"〇" * (len(line1) - len(line0))}'
+        
+        if line0.endswith(decimal_point):
+            line0 = f'{line0}〇'
         
         return f'{line0}\n{line1}'
     else:
+        if returned.endswith(decimal_point):
+            returned = f'{returned}〇'
+        
         return returned
 
 def to_numeric_type(x: str, /, type_: type = int):
@@ -141,27 +150,18 @@ def to_numeric_type(x: str, /, type_: type = int):
                 break
     
     if shift:
-        dps = len(line0.replace('.', ''))
-        with localcontext(prec=dps) as ctx:
-            returned = type_(0)
-            for i in line0:
-                if i in '.．':
-                    continue
-                
-                if type_ is Decimal:
-                    returned += type_(suzhou_numeral_value(i)).scaleb(shift)
-                else:
-                    returned += suzhou_numeral_value(i) * (10 ** shift)
-                
-                shift -= 1
+        returned = ''
+        for i in line0:
+            if i in '.．':
+                continue
+            
+            returned = f'{returned}{suzhou_numeral_value(i)}'
+            if shift == 0:
+                returned += '.'
+            
+            shift -= 1
         
-        if negative:
-            if type_ is Decimal:
-                return returned.copy_negate()
-            else:
-                return -returned
-        else:
-            return returned
+        return type_(f'{"-" if negative else ""}{returned}{"0" * (shift + 1)}')
     else:
         return type_(f'{"-" if negative else ""}{"".join("." if i in ".．" else str(suzhou_numeral_value(i)) for i in line0)}')
 
