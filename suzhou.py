@@ -93,9 +93,9 @@ def suzhou(x: Real, /, n: int = None, mag: bool = False, trim_0: bool = True, si
             line1 += '　' * (mag_n - 5) + '万'
         
         if trim_0:
-            line0 = line0.rstrip("〇")
+            line0 = line0.rstrip(ZERO)
             if len(line0) < len(line1):
-                line0 = f'{line0}{"〇" * (len(line1) - len(line0))}'
+                line0 = f'{line0}{ZERO * (len(line1) - len(line0))}'
         
         if line0.endswith(decimal_point):
             line0 = f'{line0}〇'
